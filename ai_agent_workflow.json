@@ -1,0 +1,382 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "46260c73-ab25-4688-a445-2c79d251705a",
+      "name": "Telegram Trigger",
+      "webhookId": "45bd1e36-d7b4-44ee-8775-df2ff990058b",
+      "credentials": {
+        "telegramApi": {
+          "id": "dW62N1qAJFVkyNeE",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an AI assistant for managing personal tasks via Telegram.\n\nYour responsibilities:\n1. Understand the user's message.\n2. Determine the intent:\n   - \"add_task\" if the user wants to add a task or reminder.\n   - \"query_task\" if the user is asking about existing tasks by date or period.\n3. If intent is \"add_task\":\n   - Extract the task date in format YYYY-MM-DD (use year 2026 if not specified by the user).\n   - Extract a clear task description.\n   - Assign priority:\n     - High — birthdays, deadlines, urgent reminders.\n     - Medium — normal planned tasks.\n     - Low — optional or vague tasks.\n4. If intent is \"query_task\":\n   - Extract the relevant date:\n     - If the user specifies a day, return YYYY-MM-DD.\n     - If the user specifies only a month, return YYYY-MM.\n\nReturn ONLY valid JSON in the following format.\nDo not add any explanations or extra text.\n\n{\n  \"intent\": \"add_task | query_task\",\n  \"task_date\": \"YYYY-MM-DD | YYYY-MM\",\n  \"description\": \"string\",\n  \"priority\": \"High | Medium | Low\"\n}\n\nUser message:\n{{ $json.message.text }}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "909b340e-8a3b-4899-a06b-8760cb4ad090",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        288,
+        208
+      ],
+      "id": "06306ee4-28e5-4087-9e7d-5600686d2028",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "RfzLgTYt5lLj3nm4",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawText = $json.output;\n\nconst cleaned = rawText\n  .replace(/```json/g, '')\n  .replace(/```/g, '')\n  .trim();\n\nreturn {\n  json: JSON.parse(cleaned)\n};\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "0dd87c96-6488-4ea5-9076-ea9bf1a5c634",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a1a3abd3-11e0-4461-9b18-0d5407857a5e",
+              "leftValue": "={{$json.intent}}",
+              "rightValue": "add_task",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        816,
+        64
+      ],
+      "id": "3d1c6c10-bf34-47c7-a590-ab614bcb428b",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1-54r4XZueavOrg9rjLJzA4bCDmnBrVrs1jvrMxoMZ7k/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "=0",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "task_date": "={{$json.task_date}}",
+            "description": "={{$json.description}}",
+            "priority": "={{$json.priority}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "task_date",
+              "displayName": "task_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        512,
+        576
+      ],
+      "id": "132db581-be31-45bb-9006-89b68bc5132c",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pUnjh7BU7ofTlet4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=✅ Tapşırıq əlavə edildi! 📅 {{$json.task_date}} 📝 {{$json.description}} 🔥 {{$json.priority}}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        576
+      ],
+      "id": "76ca7ce7-0044-4b57-b836-198f02496778",
+      "name": "Send a text message",
+      "webhookId": "d8e6f2bc-f77b-47f1-8b3a-58e48cca7e17",
+      "credentials": {
+        "telegramApi": {
+          "id": "dW62N1qAJFVkyNeE",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\n\n\nconst queryMonth = $('If').first().json.task_date\n\nconst filtered = rows.filter(item =>\n  item.json.task_date.startsWith(queryMonth)\n);\n\nif (filtered.length === 0) {\n  return [{\n    json: {\n      message: \"Bu tarix üzrə tapşırıq tapılmadı.\"\n    }\n  }];\n}\n\nlet message = \"📌 Tapşırıqlarınız:\\n\\n\";\n\nfiltered.forEach((item, index) => {\n  message += `${index + 1}. 📅 ${item.json.task_date}\\n`;\n  message += `📝 ${item.json.description}\\n`;\n  message += `🔥 Prioritet: ${item.json.priority}\\n\\n`;\n});\n\nconst chatId = $('Telegram Trigger').first().json.message.chat.id;\n\nreturn [{\n  json: { \n    message, \n    chatId \n  }\n}];\n\n\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        288
+      ],
+      "id": "13f26a82-fced-405d-95e9-74e97638ec08",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1-54r4XZueavOrg9rjLJzA4bCDmnBrVrs1jvrMxoMZ7k",
+          "mode": "list",
+          "cachedResultName": "daily_schedule",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1-54r4XZueavOrg9rjLJzA4bCDmnBrVrs1jvrMxoMZ7k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1-54r4XZueavOrg9rjLJzA4bCDmnBrVrs1jvrMxoMZ7k/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        960,
+        320
+      ],
+      "id": "afdf3c31-99bc-4e7c-b5a0-35e72a11ed25",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pUnjh7BU7ofTlet4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1392,
+        288
+      ],
+      "id": "ef064242-bcd1-4a59-aae7-30576d98897c",
+      "name": "Send a text message1",
+      "webhookId": "2008aeb1-718c-438e-af6c-06812f60ab52",
+      "credentials": {
+        "telegramApi": {
+          "id": "dW62N1qAJFVkyNeE",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "33ea4150-6648-4edc-baa7-7d439f1f87e8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e97218b2fa24e5c9a59ac1c5ea12efa982c0aa5eb4be47d53b58212cd0c2049a"
+  },
+  "id": "QrheCqKP8zR-PKbsyFRor",
+  "tags": []
+}
